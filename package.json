@@ -1,0 +1,11 @@
+{
+  "name": "helpmeout",
+  "version": "1.0.0",
+  "description": "An API for a Chrome Extension for screen recording and sharing",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Malach Salama",
+  "license": "MIT"
+}
