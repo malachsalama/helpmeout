@@ -8,7 +8,6 @@ const getMimeType = require("../helpers/formatHandler");
 
 // Create video endpoint
 router.post("/upload", upload.single("video"), async (req, res) => {
-  // Get the video file from the request
   const videoFile = req.file;
   console.log(videoFile);
 
@@ -22,14 +21,12 @@ router.post("/upload", upload.single("video"), async (req, res) => {
     .rename(videoFile.path, `./videos/${videoFileName}`)
     .then(() => {
       // File has been successfully renamed/moved
-      // Continue with the rest of your logic
     })
     .catch(async (error) => {
-      // Handle any errors that occurred during file renaming/moving
       console.error("Error moving file:", error);
 
       // Send a response to the client with an error message
-      res.status(500).json({ error: "Failed to move the file" });
+      res.status(500).json({ error: "Failed to save the file" });
 
       // Delete the partially uploaded file
       await fs.promises.unlink(videoFile.path);
@@ -39,20 +36,42 @@ router.post("/upload", upload.single("video"), async (req, res) => {
   res.json({ message: "Video uploaded successfully!", videoId });
 });
 
-// Get video stream endpoint
+// Get video stream endpoint with partial content support
 router.get("/watch/:videoName", (req, res) => {
   const { videoName } = req.params;
-
   const videoFilePath = path.join(__dirname, "..", "videos", videoName);
 
   // Check if the video file exists on disk
   if (fs.existsSync(videoFilePath)) {
-    // Create a read stream for the video file
-    const videoStream = fs.createReadStream(videoFilePath);
+    const videoSize = fs.statSync(videoFilePath).size;
 
-    // Set the appropriate content type for the video
+    // Parse the range header from the request
+    const rangeHeader = req.headers.range;
+
+    if (rangeHeader) {
+      // If the range header is present, parse the start and end byte positions
+      const [, range] = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+
+      const start = parseInt(range[0]);
+      const end = range[1] ? parseInt(range[1]) : videoSize - 1;
+
+      const contentLength = end - start + 1;
+
+      // Set the appropriate headers for a partial content response
+      res.status(206);
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${videoSize}`);
+      res.setHeader("Content-Length", contentLength);
+    } else {
+      res.setHeader("Content-Length", videoSize);
+    }
     const mimeType = getMimeType(videoName);
     res.setHeader("Content-Type", mimeType);
+
+    // Create a read stream for the video file, starting from the specified byte position
+    const videoStream = fs.createReadStream(videoFilePath, {
+      start,
+      end,
+    });
 
     // Pipe the video stream to the response
     videoStream.pipe(res);
