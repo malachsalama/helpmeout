@@ -41,12 +41,9 @@ router.post("/upload", upload.single("video"), async (req, res) => {
 
 // Get video stream endpoint
 router.get("/watch/:videoName", (req, res) => {
-  let { videoName } = req.params;
-  console.log(videoName);
-  videoName = videoName.replace(/[^\w\d.]+/g, "_");
+  const { videoName } = req.params;
 
   const videoFilePath = path.join(__dirname, "..", "videos", videoName);
-  console.log(videoFilePath);
 
   // Check if the video file exists on disk
   if (fs.existsSync(videoFilePath)) {
